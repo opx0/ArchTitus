@@ -24,6 +24,8 @@ echo -ne "
 "
 #Add parallel downloading
 sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
+sed -i 's/^#Color/Color/' /etc/pacman.conf
+sed -i 's/^#VerbosePkgLists/VerbosePkgLists/' /etc/pacman.conf
 
 pacman -S --noconfirm --needed networkmanager dhclient pacman-contrib curl reflector rsync grub arch-install-scripts git
 systemctl enable --now NetworkManager
