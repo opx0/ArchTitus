@@ -3,4 +3,4 @@ installlog.txt
 archnikus.code-workspace
 configs/setup.conf
 # keep logs out
-configs/*.log
+configs/*.log*.qcow2

@@ -278,26 +278,96 @@ esac
 
 # @description Disk selection for drive to be used with installation.
 diskpart () {
-echo -ne "
+    echo -ne "
+------------------------------------------------------------------------
+    PARTITION SELECTION
+------------------------------------------------------------------------
+"
+    options=("Auto (Wipe & Auto-Partition Disk)" "Custom (Select Existing Partitions)")
+    select_option $? 1 "${options[@]}"
+    
+    case ${options[$?]} in
+        "Auto (Wipe & Auto-Partition Disk)")
+            echo -ne "
 ------------------------------------------------------------------------
     THIS WILL FORMAT AND DELETE ALL DATA ON THE DISK
     Please make sure you know what you are doing because
     after formating your disk there is no way to get data back
 ------------------------------------------------------------------------
-
 "
-
-PS3='
-Select the disk to install on: '
-options=($(lsblk -n --output TYPE,KNAME,SIZE | awk '$1=="disk"{print "/dev/"$2"|"$3}'))
-
-select_option $? 1 "${options[@]}"
-disk=${options[$?]%|*}
-
-echo -e "\n${disk%|*} selected \n"
-    set_option DISK ${disk%|*}
-
-drivessd
+            PS3='Select the disk to install on: '
+            options=($(lsblk -n --output TYPE,KNAME,SIZE | awk '$1=="disk"{print "/dev/"$2"|"$3}'))
+            select_option $? 1 "${options[@]}"
+            disk=${options[$?]%|*}
+            echo -e "\n${disk%|*} selected \n"
+            set_option DISK ${disk%|*}
+            set_option PARTITION_MODE "AUTO"
+            drivessd
+            ;;
+        "Custom (Select Existing Partitions)")
+            echo -ne "
+------------------------------------------------------------------------
+    CUSTOM PARTITION MODE
+    You will select a ROOT partition (will be FORMATTED)
+    and an EFI partition (will be MOUNTED, not formatted)
+------------------------------------------------------------------------
+"
+            # Root Selection
+            echo -ne "\nSelect ROOT Partition (Partition will be FORMATTED):\n"
+            options=($(lsblk -n --list --output TYPE,KNAME,SIZE,MOUNTPOINT | awk '$1=="part" && $4=="" {print "/dev/"$2"|"$3}'))
+            if [ ${#options[@]} -eq 0 ]; then
+                echo "No available unmounted partitions found!"
+                sleep 2
+                diskpart
+                return
+            fi
+            select_option $? 1 "${options[@]}"
+            part_root=${options[$?]%|*}
+            set_option PARTITION_ROOT $part_root
+            
+            # EFI Selection
+            echo -ne "\nSelect EFI/Boot Partition (Must be FAT32/EFI, will NOT be formatted):\n"
+            options=($(lsblk -n --list --output TYPE,KNAME,SIZE | awk '$1=="part"{print "/dev/"$2"|"$3}'))
+            select_option $? 1 "${options[@]}"
+            part_efi=${options[$?]%|*}
+            
+            # EXPLICIT VERIFICATION
+            echo -ne "
+------------------------------------------------------------------------
+    VERIFY YOUR SELECTION
+------------------------------------------------------------------------
+    ROOT Partition (TO BE FORMATTED):  $part_root
+    EFI  Partition (NO FORMAT):        $part_efi
+------------------------------------------------------------------------
+Is this exactly correct? (yes/no)
+"
+            options=("Yes" "No")
+            select_option $? 1 "${options[@]}"
+            case ${options[$?]} in
+                "Yes")
+                    echo "Selections confirmed."
+                    set_option PARTITION_ROOT $part_root
+                    set_option PARTITION_EFI $part_efi
+                    set_option PARTITION_MODE "CUSTOM"
+                    
+                    # Derive DISK from PARTITION_ROOT for bootloader installation
+                    # lsblk -no pkname returns the parent device (e.g., sda from sda2, or nvme0n1 from nvme0n1p2)
+                    local parent_disk=$(lsblk -no pkname $part_root)
+                    set_option DISK "/dev/$parent_disk"
+                    echo "Derived Disk for Bootloader: /dev/$parent_disk"
+                    ;;
+                "No")
+                    echo "Restarting partition selection..."
+                    sleep 1
+                    diskpart
+                    return
+                    ;;
+            esac
+            
+            # Ask SSD question to optimize mount options
+            drivessd
+            ;;
+    esac
 }
 
 # @description Gather username and password to be used for installation. 

@@ -61,10 +61,18 @@ echo -ne "
 "
 if [[ ${DESKTOP_ENV} == "kde" ]]; then
   systemctl enable sddm.service
-  if [[ ${INSTALL_TYPE} == "FULL" ]]; then
-    echo [Theme] >>  /etc/sddm.conf
-    echo Current=Nordic >> /etc/sddm.conf
-  fi
+  # Install WhiteSur SDDM theme for macOS look (all KDE installs)
+  echo "Installing WhiteSur SDDM theme..."
+  cd /tmp
+  git clone --depth=1 https://github.com/vinceliuice/WhiteSur-kde.git
+  cd WhiteSur-kde/sddm
+  cp -r WhiteSur /usr/share/sddm/themes/
+  cd /tmp && rm -rf WhiteSur-kde
+  
+  # Configure SDDM to use WhiteSur theme
+  mkdir -p /etc/sddm.conf.d
+  echo "[Theme]" > /etc/sddm.conf.d/theme.conf
+  echo "Current=WhiteSur" >> /etc/sddm.conf.d/theme.conf
 
 elif [[ "${DESKTOP_ENV}" == "gnome" ]]; then
   systemctl enable gdm.service
