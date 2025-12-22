@@ -17,20 +17,22 @@ echo -ne "
 -------------------------------------------------------------------------
 "
 source $HOME/ArchTitus/configs/setup.conf
+
+#Add parallel downloading
+sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
+
 echo -ne "
 -------------------------------------------------------------------------
                     Network Setup 
 -------------------------------------------------------------------------
 "
-pacman -S --noconfirm --needed networkmanager dhclient
+pacman -S --noconfirm --needed networkmanager dhclient pacman-contrib curl reflector rsync grub arch-install-scripts git
 systemctl enable --now NetworkManager
 echo -ne "
 -------------------------------------------------------------------------
                     Setting up mirrors for optimal download 
 -------------------------------------------------------------------------
 "
-pacman -S --noconfirm --needed pacman-contrib curl
-pacman -S --noconfirm --needed reflector rsync grub arch-install-scripts git
 cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.bak
 
 nc=$(grep -c ^processor /proc/cpuinfo)
@@ -45,6 +47,7 @@ TOTAL_MEM=$(cat /proc/meminfo | grep -i 'memtotal' | grep -o '[[:digit:]]*')
 if [[  $TOTAL_MEM -gt 8000000 ]]; then
 sed -i "s/#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j$nc\"/g" /etc/makepkg.conf
 sed -i "s/COMPRESSXZ=(xz -c -z -)/COMPRESSXZ=(xz -c -T $nc -z -)/g" /etc/makepkg.conf
+sed -i "s/COMPRESSZST=(zstd -c -z -q -)/COMPRESSZST=(zstd -c -T $nc -z -q -)/g" /etc/makepkg.conf
 fi
 echo -ne "
 -------------------------------------------------------------------------
@@ -63,9 +66,6 @@ localectl --no-ask-password set-keymap ${KEYMAP}
 # Add sudo no password rights
 sed -i 's/^# %wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
 sed -i 's/^# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/' /etc/sudoers
-
-#Add parallel downloading
-sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
 
 #Enable multilib
 sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
