@@ -175,20 +175,27 @@ enforce_macos_theme() {
         sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$REAL_USER")/bus" "$@"
     }
 
-    # Try to apply global theme
-    # Note: 'WhiteSur' might need checking specific name in 'lookandfeeltool -l'
-    # Assuming 'WhiteSur' is the correct ID.
-    if ! run_as_user lookandfeeltool -l | grep -q "WhiteSur"; then
+    # Check current Look and Feel
+    # Note: 'WhiteSur' might be 'com.github.vinceliuice.WhiteSur' or similar.
+    # But usually applying it again is harmless.
+    # We try to check via kreadconfig if available, otherwise we apply.
+
+    CURRENT_LNF=""
+    if command -v kreadconfig5 &>/dev/null; then
+         CURRENT_LNF=$(sudo -u "$REAL_USER" kreadconfig5 --file kdeglobals --group General --key lookAndFeelPackage)
+    elif command -v kreadconfig6 &>/dev/null; then
+         CURRENT_LNF=$(sudo -u "$REAL_USER" kreadconfig6 --file kdeglobals --group General --key lookAndFeelPackage)
+    fi
+
+    if [[ "$CURRENT_LNF" != *"WhiteSur"* ]]; then
          echo "  [..] Applying WhiteSur Global Theme..."
-         run_as_user lookandfeeltool -a "WhiteSur" || run_as_user plasma-apply-lookandfeel -a "WhiteSur"
+         if ! run_as_user lookandfeeltool -a "WhiteSur"; then
+             if ! run_as_user plasma-apply-lookandfeel -a "WhiteSur"; then
+                 echo "  [!] Warning: Failed to apply global theme via CLI tools. User may need to log out/in."
+             fi
+         fi
     else
-         echo "  [OK] WhiteSur Global Theme seems to be active (or at least present)."
-         # Force re-apply to be safe/idempotent if it's not the *current* one?
-         # The prompt asks to check if already applied.
-         # A simple check is hard with lookandfeeltool, so we might just re-apply if we aren't sure.
-         # But let's respect the "check" constraint best effort.
-         # For config files, we can check.
-         :
+         echo "  [OK] WhiteSur Global Theme seems to be active."
     fi
 
     # Force Icons/Cursors via kwriteconfig

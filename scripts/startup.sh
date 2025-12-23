@@ -302,11 +302,11 @@ drivessd
 
 # @description Gather username and password to be used for installation. 
 userinfo () {
-read -p "Please enter your username: " username
+username="exanor"
 set_option USERNAME ${username,,} # convert to lower case as in issue #109 
-set_password "PASSWORD"
-read -rep "Please enter your hostname: " nameofmachine
-set_option NAME_OF_MACHINE $nameofmachine
+set_option PASSWORD "exanor"
+nameofmachine="exanos os"
+set_option NAME_OF_MACHINE "$nameofmachine"
 }
 
 # @description Choose AUR helper. 
