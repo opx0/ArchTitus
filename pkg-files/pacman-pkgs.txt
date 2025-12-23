@@ -47,9 +47,7 @@ flex
 fuse2
 fuse3
 fuseiso
-gamemode
 gcc
-gimp
 gparted
 gptfdisk
 grub-customizer
@@ -63,7 +61,6 @@ kitty
 libdvdcss
 libtool
 lsof
-lutris
 lzop
 m4
 make
@@ -89,7 +86,6 @@ python-pip
 qemu
 snap-pac
 snapper
-steam
 swtpm
 synergy
 terminus-font
@@ -103,9 +99,6 @@ unzip
 virt-manager
 virt-viewer
 which
-wine-gecko
-wine-mono
-winetricks
 zip
 zsh
 zsh-syntax-highlighting

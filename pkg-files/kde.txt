@@ -2,6 +2,8 @@ plasma-desktop
 sddm
 dolphin
 latte-dock
+appmenu-gtk-module
+libdbusmenu-glib
 --END OF MINIMAL INSTALL--
 ark
 audiocd-kio

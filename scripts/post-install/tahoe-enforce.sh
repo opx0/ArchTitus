@@ -95,9 +95,9 @@ enforce_packages() {
     echo "Enforcing required packages..."
     PACKAGES=("plymouth-git" "plasma-desktop" "dolphin" "konsole")
 
-    # Check for dock (latte-dock or plasma-panel-spacer as fallback check)
-    if ! pacman -Qi latte-dock &> /dev/null; then
-         PACKAGES+=("latte-dock")
+    # Check for dock (plank as fallback check)
+    if ! pacman -Qi plank &> /dev/null; then
+         PACKAGES+=("plank")
     fi
 
     for pkg in "${PACKAGES[@]}"; do
@@ -175,60 +175,94 @@ enforce_macos_theme() {
         sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$REAL_USER")/bus" "$@"
     }
 
-    # Check current Look and Feel
-    # Note: 'WhiteSur' might be 'com.github.vinceliuice.WhiteSur' or similar.
-    # But usually applying it again is harmless.
-    # We try to check via kreadconfig if available, otherwise we apply.
-
-    CURRENT_LNF=""
-    if command -v kreadconfig5 &>/dev/null; then
-         CURRENT_LNF=$(sudo -u "$REAL_USER" kreadconfig5 --file kdeglobals --group General --key lookAndFeelPackage)
-    elif command -v kreadconfig6 &>/dev/null; then
-         CURRENT_LNF=$(sudo -u "$REAL_USER" kreadconfig6 --file kdeglobals --group General --key lookAndFeelPackage)
-    fi
-
-    if [[ "$CURRENT_LNF" != *"WhiteSur"* ]]; then
-         echo "  [..] Applying WhiteSur Global Theme..."
-         if ! run_as_user lookandfeeltool -a "WhiteSur"; then
-             if ! run_as_user plasma-apply-lookandfeel -a "WhiteSur"; then
-                 echo "  [!] Warning: Failed to apply global theme via CLI tools. User may need to log out/in."
-             fi
-         fi
+    # 4.4 Open Settings for User Selection
+    echo "  [..] Opening KDE System Settings for manual theme selection..."
+    echo "       Please select 'MacTahoe-Light' (or Dark) from the window that appears."
+    
+    # Open the Global Theme settings page
+    if command -v kcmshell6 &>/dev/null; then
+         run_as_user kcmshell6 kcm_lookandfeel &>/dev/null &
+    elif command -v kcmshell5 &>/dev/null; then
+         run_as_user kcmshell5 kcm_lookandfeel &>/dev/null &
     else
-         echo "  [OK] WhiteSur Global Theme seems to be active."
-    fi
-
-    # Force Icons/Cursors via kwriteconfig
-    # This edits ~/.config/kdeglobals and ~/.config/kcminputrc
-    sudo -u "$REAL_USER" kwriteconfig5 --file kdeglobals --group Icons --key Theme WhiteSur
-    sudo -u "$REAL_USER" kwriteconfig5 --file kcminputrc --group Mouse --key cursorTheme WhiteSur-cursors
-    # For Plasma 6 support (kwriteconfig6 might be needed, or just kwriteconfig)
-    if command -v kwriteconfig6 &>/dev/null; then
-         sudo -u "$REAL_USER" kwriteconfig6 --file kdeglobals --group Icons --key Theme WhiteSur
-         sudo -u "$REAL_USER" kwriteconfig6 --file kcminputrc --group Mouse --key cursorTheme WhiteSur-cursors
+         run_as_user systemsettings kcm_lookandfeel &>/dev/null &
     fi
 }
 
 # ------------------------------------------------------------------------------
-# 5. Enforce Plymouth (Boot Animation)
+# 5. Enforce Panel Settings (Dimensions/Layout)
+# ------------------------------------------------------------------------------
+enforce_panel_settings() {
+    echo "Enforcing Panel Settings..."
+    
+    # Define the JS script to set panel height
+    # Target height: 30px (typical for macOS menu bar look)
+    read -r -d '' JS_SCRIPT <<'EOF'
+var allPanels = panels();
+var foundTop = false;
+for (var i = 0; i < allPanels.length; i++) {
+    var p = allPanels[i];
+    if (p.location == "top") {
+        p.height = 30;
+        foundTop = true;
+    }
+}
+if (!foundTop) {
+    // Optional: Create top panel if missing? 
+    // For now, we assume one exists as per standard layout.
+}
+EOF
+
+    # Helper to run as user (re-defined locally if needed, but we can reuse if in scope or redefine)
+    # We'll just define the specific execution logic here using the variables from main or global scope
+    # Accessing REAL_USER from global scope
+    
+    echo "  [..] Setting panel height to 30px..."
+    
+    # Detect qdbus executable
+    QDBUS_CMD=""
+    if command -v qdbus6 &>/dev/null; then
+        QDBUS_CMD="qdbus6"
+    elif command -v qdbus-qt5 &>/dev/null; then
+        QDBUS_CMD="qdbus-qt5"
+    elif command -v qdbus &>/dev/null; then
+        QDBUS_CMD="qdbus"
+    fi
+
+    if [ -n "$QDBUS_CMD" ]; then
+        # We need to run this command as the user, with their DBus session environment
+        # We rely on finding the user's bus address.
+        USER_ID=$(id -u "$REAL_USER")
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_ID/bus"
+        
+        # Run the script via qdbus
+        # Note: We need to use sudo -u to run as the user
+        if sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" "$QDBUS_CMD" org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$JS_SCRIPT" >/dev/null; then
+            echo "  [OK] Panel height updated."
+        else
+            echo "  [!] Warning: Failed to update panel settings via $QDBUS_CMD."
+        fi
+    else
+        echo "  [!] Error: qdbus not found. Cannot script panel settings."
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# 6. Enforce Plymouth (Boot Animation)
 # ------------------------------------------------------------------------------
 enforce_plymouth() {
     echo "Enforcing Plymouth..."
 
-    # 5.1 Install Plymouth Theme
-    # WhiteSur theme usually comes with the theme installer, but we can check specifically
-    # or install a package.
-    # If the user wants "Tahoe" branding, we might use a specific one, but "macOS-like" is requested.
-    # We will use the AUR package 'plymouth-theme-macos-git' or similar if available,
-    # OR since we downloaded WhiteSur theme earlier, it might have a plymouth option.
-    # Let's try installing from AUR as generic fallback.
-
+    # 5.1 Install Plymouth Theme -> 6.1
+    # ... (logic remains same, just comments) ...
+    # ...
+    
     if ! pacman -Qi plymouth-theme-macos-git &> /dev/null; then
         echo "  [..] Installing plymouth-theme-macos-git..."
         sudo -u "$REAL_USER" "$AUR_HELPER" -S --noconfirm --needed plymouth-theme-macos-git
     fi
 
-    # 5.2 Configure Plymouth
+    # 6.2 Configure Plymouth
     PLYMOUTH_CONF="/etc/plymouth/plymouthd.conf"
     # Check if config needs update
     if ! grep -q "Theme=macos" "$PLYMOUTH_CONF" 2>/dev/null; then
@@ -243,7 +277,7 @@ enforce_plymouth() {
         echo "  [OK] Plymouth theme is already set to macos."
     fi
 
-    # 5.3 Configure mkinitcpio hooks
+    # 6.3 Configure mkinitcpio hooks
     MKINITCPIO_CONF="/etc/mkinitcpio.conf"
     if grep -q "^HOOKS=.*plymouth" "$MKINITCPIO_CONF"; then
         echo "  [OK] Plymouth hook is present."
@@ -269,6 +303,7 @@ main() {
     install_aur_helper
     enforce_packages
     enforce_macos_theme
+    enforce_panel_settings
     enforce_plymouth
 
     echo "========================================"

@@ -2,12 +2,9 @@
 autojump
 brave-bin
 bridge-utils
-dxvk-bin
 github-desktop-bin
 lightly-git
 lightlyshaders-git
-mangohud
-mangohud-common
 nerd-fonts-fira-code
 nordic-darker-standard-buttons-theme
 nordic-darker-theme

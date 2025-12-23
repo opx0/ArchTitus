@@ -4,3 +4,4 @@ archnikus.code-workspace
 configs/setup.conf
 # keep logs out
 configs/*.log*.qcow2
+Report.md
