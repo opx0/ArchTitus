@@ -61,10 +61,30 @@ echo -ne "
 "
 if [[ ${DESKTOP_ENV} == "kde" ]]; then
   systemctl enable sddm.service
-  if [[ ${INSTALL_TYPE} == "FULL" ]]; then
-    echo [Theme] >>  /etc/sddm.conf
-    echo Current=Nordic >> /etc/sddm.conf
+  # Install SDDM theme via AUR (macOS Mojave style)
+  echo "Installing SDDM theme via AUR..."
+  
+  # Install Qt dependencies required for SDDM themes
+  echo "Installing Qt graphical effects dependencies..."
+  pacman -S --noconfirm --needed qt5-graphicaleffects qt6-5compat
+  
+  # Note: This runs post-chroot, AUR helper should be installed by 2-user.sh
+  # Use pacman to query if theme is already installed
+  if ! pacman -Qi sddm-theme-redrock &>/dev/null; then
+    # Install via yay if available, fall back to paru
+    if command -v yay &>/dev/null; then
+      sudo -u $USERNAME yay -S --noconfirm sddm-theme-redrock
+    elif command -v paru &>/dev/null; then
+      sudo -u $USERNAME paru -S --noconfirm sddm-theme-redrock
+    else
+      echo "Warning: No AUR helper found, skipping SDDM theme"
+    fi
   fi
+  
+  # Configure SDDM to use redrock theme
+  mkdir -p /etc/sddm.conf.d
+  echo "[Theme]" > /etc/sddm.conf.d/theme.conf
+  echo "Current=redrock" >> /etc/sddm.conf.d/theme.conf
 
 elif [[ "${DESKTOP_ENV}" == "gnome" ]]; then
   systemctl enable gdm.service
@@ -120,7 +140,7 @@ echo -ne "
 -------------------------------------------------------------------------
 "
 PLYMOUTH_THEMES_DIR="$HOME/ArchTitus/configs/usr/share/plymouth/themes"
-PLYMOUTH_THEME="arch-glow" # can grab from config later if we allow selection
+PLYMOUTH_THEME="exanor-glow" # can grab from config later if we allow selection
 mkdir -p /usr/share/plymouth/themes
 echo 'Installing Plymouth theme...'
 cp -rf ${PLYMOUTH_THEMES_DIR}/${PLYMOUTH_THEME} /usr/share/plymouth/themes
