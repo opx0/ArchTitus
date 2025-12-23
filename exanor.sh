@@ -130,7 +130,7 @@ apply_kde_themes() {
     
     # Try plasma-apply-lookandfeel (needs DBus, works only in live session)
     if command -v plasma-apply-lookandfeel &> /dev/null && [[ -n "$DBUS_SESSION_BUS_ADDRESS" ]]; then
-        run_as_user plasma-apply-lookandfeel -a com.github.vinceliuice.MacTahoe 2>/dev/null || true
+        run_as_user plasma-apply-lookandfeel -a com.github.vinceliuice.MacTahoe-Dark 2>/dev/null || true
         run_as_user plasma-apply-cursortheme WhiteSur-cursors 2>/dev/null || true
     fi
     
@@ -259,6 +259,56 @@ setup_dock() {
 }
 
 # -------------------------------------------------------------------------
+# 8. Plymouth Theme
+# -------------------------------------------------------------------------
+check_plymouth_theme() {
+    echo "-------------------------------------------------------------------------"
+    echo "    Plymouth Boot Splash"
+    echo "-------------------------------------------------------------------------"
+    
+    local THEME_NAME="exanor-glow"
+    local SOURCE_DIR="$REPO_ROOT/configs/usr/share/plymouth/themes/$THEME_NAME"
+    local DEST_DIR="/usr/share/plymouth/themes/$THEME_NAME"
+
+    # Check if we are potentially already running this theme
+    if plymouth-set-default-theme | grep -q "$THEME_NAME"; then
+         echo "[OK] Plymouth theme '$THEME_NAME' is already active."
+         return 0
+    fi
+
+    echo "Would you like to install and activate the '$THEME_NAME' Plymouth boot splash?"
+    echo "  (This requires sudo privileges to rebuild initramfs)"
+    read -p "Install Plymouth theme? [y/N]: " choice
+    
+    if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+        echo "Installing $THEME_NAME..."
+        
+        if [[ ! -d "$SOURCE_DIR" ]]; then
+             echo "Error: Source theme directory not found at $SOURCE_DIR"
+             return 1
+        fi
+        
+        # We need root access for this
+        if [[ $EUID -eq 0 ]]; then
+            mkdir -p "$DEST_DIR"
+            cp -rf "$SOURCE_DIR"/* "$DEST_DIR/"
+            echo "Setting default theme and rebuilding initramfs (this may take a minute)..."
+            plymouth-set-default-theme -R "$THEME_NAME"
+        else
+            echo "Requesting root access to install theme..."
+            sudo mkdir -p "$DEST_DIR"
+            sudo cp -rf "$SOURCE_DIR"/* "$DEST_DIR/"
+            echo "Setting default theme and rebuilding initramfs (this may take a minute)..."
+            sudo plymouth-set-default-theme -R "$THEME_NAME"
+        fi
+        
+        echo "[OK] Plymouth theme installed."
+    else
+        echo "Skipping Plymouth theme."
+    fi
+}
+
+# -------------------------------------------------------------------------
 # 7. Main
 # -------------------------------------------------------------------------
 main() {
@@ -278,6 +328,7 @@ main() {
             ;;
     esac
     
+    check_plymouth_theme
     setup_dock
     
     echo ""
