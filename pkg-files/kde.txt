@@ -1,7 +1,7 @@
 plasma-desktop
 sddm
 dolphin
-latte-dock
+plank
 appmenu-gtk-module
 libdbusmenu-glib
 --END OF MINIMAL INSTALL--

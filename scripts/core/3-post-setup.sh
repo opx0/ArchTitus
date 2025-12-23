@@ -19,11 +19,15 @@ echo -ne "
 Final Setup and Configurations
 GRUB EFI Bootloader Install & Check
 "
-source ${HOME}/ArchTitus/configs/setup.conf
-
-if [[ -d "/sys/firmware/efi" ]]; then
-    grub-install --efi-directory=/boot ${DISK}
+# Determine correct config path (works in chroot or live)
+if [[ -f "${HOME}/ArchTitus/configs/setup.conf" ]]; then
+    source ${HOME}/ArchTitus/configs/setup.conf
+elif [[ -f "/home/$USER/ArchTitus/configs/setup.conf" ]]; then
+    source /home/$USER/ArchTitus/configs/setup.conf
 fi
+
+# Note: grub-install is now handled in 1-setup.sh for better reliability
+# This script focuses on configuration and theming.
 
 echo -ne "
 -------------------------------------------------------------------------
@@ -32,10 +36,14 @@ echo -ne "
 "
 # set kernel parameter for decrypting the drive
 if [[ "${FS}" == "luks" ]]; then
-sed -i "s%GRUB_CMDLINE_LINUX_DEFAULT=\"%GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=UUID=${ENCRYPTED_PARTITION_UUID}:ROOT root=/dev/mapper/ROOT %g" /etc/default/grub
+    if ! grep -q "cryptdevice=UUID" /etc/default/grub; then
+        sed -i "s%GRUB_CMDLINE_LINUX_DEFAULT=\"%GRUB_CMDLINE_LINUX_DEFAULT=\"cryptdevice=UUID=${ENCRYPTED_PARTITION_UUID}:ROOT root=/dev/mapper/ROOT %g" /etc/default/grub
+    fi
 fi
 # set kernel parameter for adding splash screen
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*/& splash /' /etc/default/grub
+if ! grep -q "splash" /etc/default/grub; then
+    sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*/& splash /' /etc/default/grub
+fi
 
 echo -e "Installing CyberRe Grub theme..."
 THEME_DIR="/boot/grub/themes"
@@ -145,10 +153,16 @@ mkdir -p /usr/share/plymouth/themes
 echo 'Installing Plymouth theme...'
 cp -rf ${PLYMOUTH_THEMES_DIR}/${PLYMOUTH_THEME} /usr/share/plymouth/themes
 if [[ $FS == "luks" ]]; then
-  sed -i 's/HOOKS=(base udev*/& plymouth/' /etc/mkinitcpio.conf # add plymouth after base udev
-  sed -i 's/HOOKS=(base udev \(.*block\) /&plymouth-/' /etc/mkinitcpio.conf # create plymouth-encrypt after block hook
+  if ! grep -q "plymouth" /etc/mkinitcpio.conf; then
+    sed -i 's/HOOKS=(base udev*/& plymouth/' /etc/mkinitcpio.conf # add plymouth after base udev
+  fi
+  if ! grep -q "plymouth-encrypt" /etc/mkinitcpio.conf; then
+    sed -i 's/HOOKS=(base udev \(.*block\) /&plymouth-/' /etc/mkinitcpio.conf # create plymouth-encrypt after block hook
+  fi
 else
-  sed -i 's/HOOKS=(base udev*/& plymouth/' /etc/mkinitcpio.conf # add plymouth after base udev
+  if ! grep -q "plymouth" /etc/mkinitcpio.conf; then
+    sed -i 's/HOOKS=(base udev*/& plymouth/' /etc/mkinitcpio.conf # add plymouth after base udev
+  fi
 fi
 plymouth-set-default-theme -R arch-glow # sets the theme and runs mkinitcpio
 echo 'Plymouth theme installed'
@@ -159,14 +173,20 @@ echo -ne "
 -------------------------------------------------------------------------
 "
 # Remove no password sudo rights
-sed -i 's/^%wheel ALL=(ALL) NOPASSWD: ALL/# %wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
-sed -i 's/^%wheel ALL=(ALL:ALL) NOPASSWD: ALL/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/' /etc/sudoers
+if grep -q "NOPASSWD" /etc/sudoers; then
+    sed -i 's/^%wheel ALL=(ALL) NOPASSWD: ALL/# %wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
+    sed -i 's/^%wheel ALL=(ALL:ALL) NOPASSWD: ALL/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/' /etc/sudoers
+fi
 # Add sudo rights
-sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
-sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+if grep -q "^# %wheel ALL=(ALL) ALL" /etc/sudoers; then
+    sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
+fi
+if grep -q "^# %wheel ALL=(ALL:ALL) ALL" /etc/sudoers; then
+    sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+fi
 
-rm -r $HOME/ArchTitus
-rm -r /home/$USERNAME/ArchTitus
+# Cleanup
+# Removed destructive rm commands to allow re-running the script
+echo "Setup complete. The ArchTitus directory has been kept in your home folder."
 
-# Replace in the same state
 cd $pwd

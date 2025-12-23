@@ -33,9 +33,21 @@ echo -ne "
       # Apply Exanor theming
       cp $SCRIPT_DIR/exanor.sh /mnt/home/$USERNAME/ArchTitus/exanor.sh
       chmod +x /mnt/home/$USERNAME/ArchTitus/exanor.sh
-      ( arch-chroot /mnt /usr/bin/runuser -u $USERNAME -- /home/$USERNAME/ArchTitus/exanor.sh )|& tee exanor.log
+      # ( arch-chroot /mnt /usr/bin/runuser -u $USERNAME -- /home/$USERNAME/ArchTitus/exanor.sh )|& tee exanor.log
     fi
-    ( arch-chroot /mnt $HOME/ArchTitus/scripts/core/3-post-setup.sh )|& tee 3-post-setup.log
+    # ( arch-chroot /mnt $HOME/ArchTitus/scripts/core/3-post-setup.sh )|& tee 3-post-setup.log
+    echo "
+    -------------------------------------------------------------------------
+      IMPORTANT: Post-Setup & Theming Skipped (Queued)
+      Please run the following commands AFTER rebooting and logging in:
+      
+      1. Configure System:
+         sudo ./ArchTitus/scripts/core/3-post-setup.sh
+         
+      2. Apply Theming (Optional):
+         sudo ./ArchTitus/exanor.sh
+    -------------------------------------------------------------------------
+    "
     cp -v *.log /mnt/home/$USERNAME
 
 echo -ne "
