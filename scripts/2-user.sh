@@ -59,47 +59,15 @@ fi
 
 export PATH=$PATH:~/.local/bin
 
-# Theming DE for KDE - macOS Tahoe themes (applies to all KDE installs)
-if [[ $DESKTOP_ENV == "kde" ]]; then
+# Theming DE if user chose FULL installation
+if [[ $INSTALL_TYPE == "FULL" ]]; then
+  if [[ $DESKTOP_ENV == "kde" ]]; then
     cp -r ~/ArchTitus/configs/.config/* ~/.config/
-    
-    echo -ne "
--------------------------------------------------------------------------
-                Installing macOS Tahoe Themes
--------------------------------------------------------------------------
-"
-    cd ~
-    
-    # MacTahoe Icons
-    echo "Installing MacTahoe Icons..."
-    git clone --depth=1 https://github.com/vinceliuice/MacTahoe-icon-theme.git
-    cd MacTahoe-icon-theme && ./install.sh && cd ~
-    
-    # MacTahoe KDE Theme
-    echo "Installing MacTahoe KDE Theme..."
-    git clone --depth=1 https://github.com/vinceliuice/MacTahoe-kde.git
-    cd MacTahoe-kde && ./install.sh && cd ~
-    
-    # WhiteSur Cursors
-    echo "Installing WhiteSur Cursors..."
-    git clone --depth=1 https://github.com/vinceliuice/WhiteSur-cursors.git
-    cd WhiteSur-cursors && ./install.sh && cd ~
-    
-    # Apply themes using plasma tools
-    echo "Applying macOS themes..."
-    plasma-apply-lookandfeel -a com.github.vinceliuice.MacTahoe || true
-    plasma-apply-cursortheme WhiteSur-cursors || true
-    /usr/lib/plasma-changeicons MacTahoe || true
-    
-    # Set themes via kwriteconfig5 as fallback
-    kwriteconfig5 --file kdeglobals --group Icons --key Theme "MacTahoe"
-    kwriteconfig5 --file kdeglobals --group General --key ColorScheme "MacTahoe"
-    kwriteconfig5 --file kcminputrc --group Mouse --key cursorTheme "WhiteSur-cursors"
-    
-    # Cleanup theme repos
-    rm -rf ~/MacTahoe-icon-theme ~/MacTahoe-kde ~/WhiteSur-cursors
-    
-    echo "macOS Tahoe themes installed successfully!"
+    pip install konsave
+    konsave -i ~/ArchTitus/configs/kde.knsv
+    sleep 1
+    konsave -a kde
+ fi
 fi
 
 echo -ne "
