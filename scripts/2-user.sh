@@ -55,6 +55,31 @@ if [[ ! $AUR_HELPER == none ]]; then
     echo "INSTALLING: ${line}"
     $AUR_HELPER -S --noconfirm --needed ${line}
   done
+
+  if [[ $DESKTOP_ENV == "kde" ]]; then
+      echo "INSTALLING: WhiteSur Theme Packages for KDE..."
+      $AUR_HELPER -S --noconfirm --needed whitesur-kde-theme-git whitesur-gtk-theme-git whitesur-icon-theme-git whitesur-cursor-theme-git
+
+      echo "Setting up MacOS Infection Script..."
+      mkdir -p $HOME/.local/bin
+
+      # Determine source directory robustly
+      SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+      cp "$SCRIPT_DIR/check-macos-theme.sh" $HOME/.local/bin/
+
+      chmod +x $HOME/.local/bin/check-macos-theme.sh
+
+      mkdir -p $HOME/.config/autostart
+      cat <<EOF > $HOME/.config/autostart/macos-check.desktop
+[Desktop Entry]
+Type=Application
+Exec=$HOME/.local/bin/check-macos-theme.sh
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=MacOS Theme Enforcer
+EOF
+  fi
 fi
 
 export PATH=$PATH:~/.local/bin
