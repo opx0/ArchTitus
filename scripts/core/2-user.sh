@@ -27,16 +27,17 @@ source $HOME/ArchTitus/configs/setup.conf
   git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/powerlevel10k
   ln -s "~/zsh/.zshrc" ~/.zshrc
 
-sed -n '/'$INSTALL_TYPE'/q;p' ~/ArchTitus/pkg-files/${DESKTOP_ENV}.txt | while read line
-do
-  if [[ ${line} == '--END OF MINIMAL INSTALL--' ]]
-  then
-    # If selected installation type is FULL, skip the --END OF THE MINIMAL INSTALLATION-- line
-    continue
+pkgs=()
+while IFS= read -r line; do
+  if [[ ${line} != '--END OF MINIMAL INSTALL--' ]]; then
+    pkgs+=("$line")
   fi
-  echo "INSTALLING: ${line}"
-  sudo pacman -S --noconfirm --needed ${line}
-done
+done < <(sed -n '/'$INSTALL_TYPE'/q;p' "$HOME/ArchTitus/pkg-files/${DESKTOP_ENV}.txt")
+
+if (( ${#pkgs[@]} > 0 )); then
+  echo "INSTALLING PACKAGES: ${pkgs[*]}"
+  sudo pacman -S --noconfirm --needed "${pkgs[@]}"
+fi
 
 
 if [[ ! $AUR_HELPER == none ]]; then
@@ -46,15 +47,17 @@ if [[ ! $AUR_HELPER == none ]]; then
   makepkg -si --noconfirm
   # sed $INSTALL_TYPE is using install type to check for MINIMAL installation, if it's true, stop
   # stop the script and move on, not installing any more packages below that line
-  sed -n '/'$INSTALL_TYPE'/q;p' ~/ArchTitus/pkg-files/aur-pkgs.txt | while read line
-  do
-    if [[ ${line} == '--END OF MINIMAL INSTALL--' ]]; then
-      # If selected installation type is FULL, skip the --END OF THE MINIMAL INSTALLATION-- line
-      continue
+  aur_pkgs=()
+  while IFS= read -r line; do
+    if [[ ${line} != '--END OF MINIMAL INSTALL--' ]]; then
+      aur_pkgs+=("$line")
     fi
-    echo "INSTALLING: ${line}"
-    $AUR_HELPER -S --noconfirm --needed ${line}
-  done
+  done < <(sed -n '/'$INSTALL_TYPE'/q;p' "$HOME/ArchTitus/pkg-files/aur-pkgs.txt")
+
+  if (( ${#aur_pkgs[@]} > 0 )); then
+    echo "INSTALLING AUR PACKAGES: ${aur_pkgs[*]}"
+    $AUR_HELPER -S --noconfirm --needed "${aur_pkgs[@]}"
+  fi
 fi
 
 export PATH=$PATH:~/.local/bin
