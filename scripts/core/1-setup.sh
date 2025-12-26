@@ -83,15 +83,17 @@ echo -ne "
 # sed $INSTALL_TYPE is using install type to check for MINIMAL installation, if it's true, stop
 # stop the script and move on, not installing any more packages below that line
 if [[ ! $DESKTOP_ENV == server ]]; then
-  sed -n '/'$INSTALL_TYPE'/q;p' $HOME/ArchTitus/pkg-files/pacman-pkgs.txt | while read line
-  do
-    if [[ ${line} == '--END OF MINIMAL INSTALL--' ]]; then
-      # If selected installation type is FULL, skip the --END OF THE MINIMAL INSTALLATION-- line
-      continue
+    echo "Reading package list..."
+    # Bolt Optimization: Batch package installation to reduce transaction overhead
+    # We extract the list, removing the delimiter, comments, and empty lines
+    packages=$(sed -n '/'$INSTALL_TYPE'/q;p' $HOME/ArchTitus/pkg-files/pacman-pkgs.txt | sed '/^--END OF MINIMAL INSTALL--$/d; /^\s*#/d; /^\s*$/d')
+
+    if [[ -n "$packages" ]]; then
+        echo "INSTALLING PACKAGES..."
+        # We rely on shell word splitting to pass packages as separate arguments
+        # shellcheck disable=SC2086
+        sudo pacman -S --noconfirm --needed $packages
     fi
-    echo "INSTALLING: ${line}"
-    sudo pacman -S --noconfirm --needed ${line}
-  done
 fi
 echo -ne "
 -------------------------------------------------------------------------
